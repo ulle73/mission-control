@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mission Control Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-primary: #050508;
+    --card-bg: rgba(255,255,255,0.03);
+    --card-border: rgba(255,255,255,0.06);
+    --accent: #00bcd4; /* replace with [COLOR_ACCENT] */
+    --text-primary: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --radius: .75rem;
+    --shadow: 0 4px 30px rgba(0,0,0,.5);
+    --blur: 12px;
+    --gap: 1.5rem;
+    --header-height: 4rem;
+    --transition: .3s ease;
+}
+*,
+*::before,
+*::after { box-sizing: border-box; margin:0; padding:0; }
+html { font-family:'Inter',sans-serif; color:var(--text-primary); background:#050508; }
+body { min-height:100vh; }
+a { color:inherit; text-decoration:none; }
+button { cursor:pointer; border:none; background:none; font:inherit; }
+ul { list-style:none; }
+
+header {
+    position:sticky;
+    top:0;
+    height:var(--header-height);
+    background:rgba(255,255,255,.02);
+    backdrop-filter:blur(var(--blur));
+    border-bottom:1px solid var(--card-border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 2rem;
+    z-index:10;
+}
+header .logo { font-weight:600; font-size:1.2rem; }
+header .tabs { display:flex; gap:1rem; }
+header .tabs button {
+    padding:.5rem 1rem;
+    border-radius:var(--radius);
+    background:transparent;
+    transition:var(--transition);
+    color:var(--text-muted);
+}
+header .tabs button.active,
+header .tabs button:hover { background:var(--accent); color:#fff; }
+header .right { display:flex; align-items:center; gap:.75rem; }
+header .search { position:relative; }
+header .search input {
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    padding:.4rem .8rem .4rem 2rem;
+    color:var(--text-primary);
+}
+header .search::before {
+    content:"🔍";
+    position:absolute;
+    left:.6rem;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:.9rem;
+    color:var(--text-muted);
+}
+header .status-dot {
+    width:.9rem;
+    height:.9rem;
+    background:#4caf50;
+    border-radius:50%;
+    animation:pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { box-shadow:0 0 0 0 rgba(76,175,80,.4); }
+    70% { box-shadow:0 0 0 .8rem rgba(76,175,80,0); }
+    100% { box-shadow:0 0 0 0 rgba(76,175,80,0); }
+}
+
+/* Layout */
+main { max-width:1600px; margin:2rem auto; padding:0 2.5rem; }
+section { display:none; animation:fadeIn .5s forwards; }
+section.active { display:block; }
+@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+
+/* Cards */
+.grid {
+    display:grid;
+    gap:var(--gap);
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+}
+.card {
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    backdrop-filter:blur(var(--blur));
+    padding:1rem;
+    position:relative;
+    overflow:hidden;
+}
+.card .accent {
+    position:absolute;
+    top:0; left:0;
+    height:3px;
+    width:100%;
+    background:var(--accent);
+}
+.card .icon { font-size:1.5rem; margin-bottom:.5rem; }
+.card .label { font-size:.9rem; color:var(--text-muted); }
+.card .value { font-size:1.6rem; font-weight:600; margin-top:.3rem; }
+.card .trend { font-size:.8rem; margin-top:.2rem; }
+
+/* Activity feed */
+.feed {
+    max-height:250px;
+    overflow-y:auto;
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    padding:.75rem;
+    background:var(--card-bg);
+}
+.feed .item {
+    margin-bottom:.75rem;
+    font-size:.9rem;
+}
+.feed .timestamp { color:var(--text-muted); font-size:.75rem; }
+
+/* Priorities */
+.priority-list { margin-top:1rem; }
+.priority-item {
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+    margin-bottom:.5rem;
+}
+.priority-item input[type="checkbox"] { width:1rem; height:1rem; }
+.priority-item label { flex:1; }
+.priority-item button { color:#ff5252; }
+
+/* Kanban */
+.kanban { display:flex; gap:var(--gap); overflow-x:auto; }
+.column {
+    flex:1 0 260px;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    backdrop-filter:blur(var(--blur));
+    padding:1rem;
+}
+.column h3 { margin-bottom:.75rem; font-size:1rem; }
+.task {
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    padding:.75rem;
+    margin-bottom:.75rem;
+    cursor:pointer;
+    transition:var(--transition);
+}
+.task:hover { background:rgba(255,255,255,.07); }
+.task .badge {
+    display:inline-block;
+    padding:.2rem .5rem;
+    border-radius:.5rem;
+    font-size:.7rem;
+    margin-top:.5rem;
+}
+.badge.high { background:#ff5252; color:#fff; }
+.badge.medium { background:#ffb74d; color:#000; }
+.badge.low { background:#81c784; color:#000; }
+.column button.add { width:100%; margin-top:.5rem; padding:.4rem 0; background:var(--accent); color:#fff; border-radius:var(--radius); }
+
+/* Timeline */
+.timeline { border-left:2px solid var(--card-border); padding-left:2rem; }
+.phase {
+    position:relative;
+    margin-bottom:2rem;
+}
+.phase::before {
+    content:"";
+    position:absolute;
+    left:-1.15rem;
+    top:.15rem;
+    width:1rem;
+    height:1rem;
+    background:var(--card-bg);
+    border:2px solid var(--card-border);
+    border-radius:50%;
+}
+.phase.current::before { border-color:var(--accent); box-shadow:0 0 8px var(--accent); }
+.phase h4 { margin:0; font-size:1.1rem; }
+.phase .date { font-size:.85rem; color:var(--text-muted); margin-bottom:.5rem; }
+.phase .desc { font-size:.9rem; margin-bottom:.5rem; }
+.phase .milestones { margin-left:1rem; }
+.phase .milestones li {
+    font-size:.85rem;
+    display:flex;
+    align-items:center;
+    gap:.3rem;
+}
+.phase .milestones li.done::before { content:"✔️"; color:#4caf50; }
+.phase .milestones li.pending::before { content:"⏺️"; color:#ffb74d; }
+
+/* Notes */
+.notes textarea {
+    width:100%;
+    min-height:400px;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    padding:1rem;
+    color:var(--text-primary);
+    font-size:.95rem;
+    resize:vertical;
+}
+.notes .info { font-size:.8rem; margin-top:.5rem; color:var(--text-muted); }
+
+button { display:inline-block; background:var(--accent); color:#fff; padding:.5rem 1rem; border-radius:var(--radius); }
+button:hover { opacity:.9; }
+
+/* Animations */
+@keyframes fadeInUp {
+    from { opacity:0; transform:translateY(20px); }
+    to { opacity:1; transform:none; }
+}
+.card { animation:fadeInUp .5s ease forwards; }
+
+/* Responsive */
+@media (max-width:768px) {
+    header { flex-direction:column; height:auto; padding:1rem; }
+    header .tabs { justify-content:center; flex-wrap:wrap; }
+}
+
+/* Agent Cards */
+.agent-card {
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:var(--radius);
+    backdrop-filter:blur(var(--blur));
+    padding:1rem;
+    cursor:pointer;
+    transition:var(--transition);
+}
+.agent-card:hover { background:rgba(255,255,255,0.05); }
+.agent-header { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; }
+.agent-avatar { width:2.5rem; height:2.5rem; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:600; color:#fff; }
+.agent-status { width:.6rem; height:.6rem; border-radius:50%; margin-left:auto; }
+.status-online { background:#4caf50; }
+.status-busy { background:#ff9800; }
+.status-offline { background:#9e9e9e; }
+.agent-name { font-weight:600; }
+.agent-role { font-size:.85rem; color:var(--text-muted); }
+.agent-meta { font-size:.75rem; margin-top:.5rem; color:var(--text-muted); display:flex; justify-content:space-between; }
+
+/* Slide-out Panel */
+.slide-panel {
+    position:fixed; top:0; right:-400px; width:400px; height:100%;
+    background:rgba(5,5,8,0.95); backdrop-filter:blur(20px);
+    border-left:1px solid var(--card-border);
+    padding:2rem; overflow-y:auto;
+    transition:right .3s ease; z-index:20;
+}
+.slide-panel.open { right:0; }
+.slide-close { position:absolute; top:1rem; right:1rem; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; }
+.slide-section { margin-bottom:1.5rem; }
+.slide-section h4 { margin-bottom:.5rem; color:var(--accent); }
+.slide-section ul { padding-left:1.2rem; }
+.slide-section li { margin-bottom:.3rem; }
+.slide-log { max-height:150px; overflow-y:auto; background:rgba(255,255,255,0.03); padding:.5rem; border-radius:.5rem; font-size:.85rem; }
+.slide-log-item { margin-bottom:.4rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:.2rem; }
+.slide-btn { margin-top:1rem; width:100%; }
+
+/* Modal */
+.modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    display:flex; align-items:center; justify-content:center; z-index:30;
+    opacity:0; pointer-events:none; transition:opacity .3s ease;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal {
+    background:var(--bg-primary); border:1px solid var(--card-border);
+    border-radius:var(--radius); padding:2rem; width:400px; max-width:90%;
+    box-shadow:0 0 30px rgba(0,0,0,.8);
+}
+.modal h3 { margin-bottom:1rem; }
+.modal textarea {
+    width:100%; height:120px; background:rgba(255,255,255,0.05);
+    border:1px solid var(--card-border); border-radius:.5rem; color:var(--text-primary);
+    padding:.5rem; resize:none; margin-bottom:1rem;
+}
+.modal-actions { display:flex; gap:1rem; justify-content:flex-end; }
+.modal-cancel { background:transparent; border:1px solid var(--card-border); }
+
+/* Revenue Tab */
+.revenue-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius); backdrop-filter:blur(var(--blur)); padding:1rem; }
+.revenue-client { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.revenue-client:last-child { border-bottom:none; }
+.revenue-client-name { font-weight:600; }
+.revenue-client-value { font-family:monospace; }
+.revenue-client-status { font-size:0.8rem; padding:0.2rem 0.5rem; border-radius:1rem; }
+.status-active { background:rgba(76,175,80,0.2); color:#4caf50; }
+.status-pending { background:rgba(255,152,0,0.2); color:#ff9800; }
+.status-churned { background:rgba(158,158,158,0.2); color:#9e9e9e; }
+.revenue-actions button { margin-left:0.5rem; cursor:pointer; background:none; border:none; color:var(--text-primary); }
+.revenue-actions button:hover { color:var(--accent); }
+/* Intel Tab */
+.intel-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:var(--radius); backdrop-filter:blur(var(--blur)); padding:1rem; transition:var(--transition); }
+.intel-card:hover { background:rgba(255,255,255,0.05); }
+.intel-title { font-weight:600; margin-bottom:0.3rem; }
+.intel-summary { font-size:0.85rem; margin-bottom:0.5rem; }
+.intel-source { font-size:0.8rem; color:var(--accent); word-break:break-all; display:block; margin-bottom:0.3rem; }
+.intel-meta { font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem; }
+.intel-tag { display:inline-block; padding:0.2rem 0.5rem; border-radius:0.5rem; font-size:0.75rem; margin-left:0.5rem; }
+.tag-hot { background:rgba(255,69,0,0.2); color:#ff4500; }
+.tag-notable { background:rgba(255,215,0,0.2); color:#ffd700; }
+.tag-reference { background:rgba(30,144,255,0.2); color:#1e90ff; }
+</style>
+</head>
+<body>
+<header>
+    <div class="logo">Mission Control</div>
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+        <button class="tab-btn" data-tab="projects">📋 Projects</button>
+        <button class="tab-btn" data-tab="timeline">📅 Timeline</button>
+        <button class="tab-btn" data-tab="notes">📝 Notes</button>
+        <button class="tab-btn" data-tab="commandcenter">🏢 Command Center</button>
+        <button class="tab-btn" data-tab="revenue">💰 Revenue</button>
+        <button class="tab-btn" data-tab="intel">📡 Intel</button>
+    </div>
+    <div class="right">
+        <div class="search"><input type="text" placeholder="Search..." id="globalSearch"></div>
+        <div class="status-dot" id="statusDot"></div>
+    </div>
+</header>
+<main>
+    <!-- Dashboard -->
+    <section id="dashboard" class="active">
+        <div class="welcome" id="welcomeMsg"></div>
+        <div class="grid" style="margin-top:1.5rem;">
+            <div class="card" id="cardGoal">
+                <div class="accent"></div>
+                <div class="icon">🏆</div>
+                <div class="label">Goal Progress</div>
+                <div class="value" id="goalProgress">0%</div>
+                <div class="trend" id="goalTrend"></div>
+            </div>
+            <div class="card" id="cardProjects">
+                <div class="accent"></div>
+                <div class="icon">📂</div>
+                <div class="label">Active Projects</div>
+                <div class="value" id="activeProjects">0</div>
+                <div class="trend"></div>
+            </div>
+            <div class="card" id="cardTasks">
+                <div class="accent"></div>
+                <div class="icon">✅</div>
+                <div class="label">Tasks Today</div>
+                <div class="value" id="todayTasks">0</div>
+                <div class="trend"></div>
+            </div>
+            <div class="card" id="cardCountdown">
+                <div class="accent"></div>
+                <div class="icon">⏳</div>
+                <div class="label">Days to Goal</div>
+                <div class="value" id="daysToGoal">0</div>
+                <div class="trend"></div>
+            </div>
+        </div>
+
+        <h2 style="margin-top:2rem;">Activity Feed</h2>
+        <div class="feed" id="activityFeed"></div>
+
+        <h2 style="margin-top:2rem;">Top Priorities</h2>
+        <div class="priority-list" id="priorityList"></div>
+        <button id="addPriorityBtn">+ Add Priority</button>
+    </section>
+
+    <!-- Projects -->
+    <section id="projects">
+        <div class="kanban" id="kanbanBoard">
+            <div class="column" data-col="backlog">
+                <h3>Backlog</h3>
+                <div class="tasks"></div>
+                <button class="add">+ Add</button>
+            </div>
+            <div class="column" data-col="inprogress">
+                <h3>In Progress</h3>
+                <div class="tasks"></div>
+                <button class="add">+ Add</button>
+            </div>
+            <div class="column" data-col="done">
+                <h3>Done</h3>
+                <div class="tasks"></div>
+                <button class="add">+ Add</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timeline -->
+    <section id="timeline">
+        <div class="timeline" id="timelineContainer"></div>
+    </section>
+
+    <!-- Notes -->
+    <section id="notes">
+        <div class="notes">
+            <textarea id="notesArea" placeholder="Write your notes here..."></textarea>
+            <div class="info" id="notesInfo"></div>
+        </div>
+    </section>
+
+    <!-- Command Center -->
+    <section id="commandcenter">
+        <h2 style="margin-bottom:1rem;">🛠️ Agent Management</h2>
+        <div class="grid" id="agentGrid"></div>
+
+        <h3 style="margin:2rem 0 1rem;">📌 Executive Decisions</h3>
+        <div class="grid" id="decisionsGrid"></div>
+    </section>
+
+    <!-- Revenue -->
+    <section id="revenue">
+        <h2 style="margin-bottom:1rem;">💰 Revenue Overview</h2>
+
+        <div class="grid" style="grid-template-columns:1fr 2fr; gap:2rem;">
+            <!-- Goal Gauge -->
+            <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <div class="label">Monthly Goal</div>
+                <div id="revenueGoalDisplay" style="font-size:2rem; font-weight:600; margin:0.5rem 0;">€0</div>
+                <div class="progress-ring" style="position:relative; width:120px; height:120px;">
+                    <svg width="120" height="120" style="transform:rotate(-90deg);">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8"/>
+                        <circle id="revenueProgressRing" cx="60" cy="60" r="54" fill="none" stroke="var(--accent)" stroke-width="8" stroke-dasharray="339.292" stroke-dashoffset="339.292" style="transition:stroke-dashoffset 1s ease;"/>
+                    </svg>
+                    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:600;" id="revenuePercent">0%</div>
+                </div>
+            </div>
+            <!-- Revenue Chart -->
+            <div class="card">
+                <div class="label">Last 6 Months</div>
+                <canvas id="revenueChart" width="400" height="200" style="width:100%; height:200px;"></canvas>
+            </div>
+        </div>
+
+        <h3 style="margin:2rem 0 1rem;">Clients</h3>
+        <div class="grid" id="clientList"></div>
+        <button id="addClientBtn" style="margin-top:1rem;">+ Add Client</button>
+
+        <h3 style="margin:2rem 0 1rem;">Projections</h3>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+            <div class="card">
+                <div class="label">Current MRR</div>
+                <div class="value" id="currentMRR">€0</div>
+            </div>
+            <div class="card">
+                <div class="label">Projected Annual (steady)</div>
+                <div class="value" id="projectedAnnual">€0</div>
+            </div>
+            <div class="card">
+                <div class="label">Growth Needed (monthly)</div>
+                <div class="value" id="growthNeeded">€0</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Intel Tab -->
+    <section id="intel">
+        <h2 style="margin-bottom:1rem;">📡 Intel Dashboard</h2>
+
+        <div id="intelDailyBrief" class="grid" style="margin-bottom:2rem;"></div>
+
+        <div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+            <input type="text" id="intelSearch" placeholder="Search..." style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem; border-radius:0.5rem;">
+            <select id="intelCatFilter" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem; border-radius:0.5rem;">
+                <option value="">All Categories</option>
+                <option value="ai-news">AI News</option>
+                <option value="industry-trends">Industry Trends</option>
+                <option value="competitor-watch">Competitor Watch</option>
+                <option value="opportunities">Opportunities</option>
+            </select>
+            <select id="intelImpFilter" style="background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem; border-radius:0.5rem;">
+                <option value="">All Importance</option>
+                <option value="hot">🔥 Hot</option>
+                <option value="notable">⚡️ Notable</option>
+                <option value="reference">📌 Reference</option>
+            </select>
+        </div>
+
+        <button id="addIntelBtn" style="margin-bottom:1rem;">+ Add Intel</button>
+        <div id="intelList" class="grid"></div>
+
+        <!-- Add Intel Modal -->
+        <div id="intelModal" class="modal-overlay">
+            <div class="modal">
+                <h3>Add Intel Item</h3>
+                <input id="intelTitle" placeholder="Title" style="width:100%; margin-bottom:0.5rem; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem;">
+                <textarea id="intelSummary" placeholder="Summary" style="width:100%; height:80px; margin-bottom:0.5rem; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem;"></textarea>
+                <input id="intelSource" placeholder="Source URL" style="width:100%; margin-bottom:0.5rem; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem;">
+                <select id="intelCategory" style="width:100%; margin-bottom:0.5rem; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem;">
+                    <option value="ai-news">AI News</option>
+                    <option value="industry-trends">Industry Trends</option>
+                    <option value="competitor-watch">Competitor Watch</option>
+                    <option value="opportunities">Opportunities</option>
+                </select>
+                <select id="intelImportance" style="width:100%; margin-bottom:1rem; background:rgba(255,255,255,0.05); border:1px solid var(--card-border); color:var(--text-primary); padding:0.5rem;">
+                    <option value="hot">🔥 Hot</option>
+                    <option value="notable">⚡️ Notable</option>
+                    <option value="reference">📌 Reference</option>
+                </select>
+                <div class="modal-actions">
+                    <button class="modal-cancel" onclick="closeIntelModal()">Cancel</button>
+                    <button onclick="saveNewIntel()">Add</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide-out Panel -->
+    <div id="agentSlide" class="slide-panel">
+        <button class="slide-close" onclick="closeSlide()">×</button>
+        <div id="slideContent"></div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal-overlay">
+        <div class="modal">
+            <h3>Send Task</h3>
+            <textarea id="taskText" placeholder="Describe the task..."></textarea>
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+                <button onclick="sendTask()">Send</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+/* ==== CONFIG & UTILITIES ==== */
+const CONFIG = {
+    name: "[YOUR_NAME]",
+    business: "[YOUR_BUSINESS]",
+    role: "[YOUR_ROLE]",
+    mainGoal: "[MAIN_GOAL]",
+    goalDeadline: "[GOAL_DEADLINE]",
+    goalMetric: "[GOAL_METRIC]",
+    accent: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+};
+function formatDate(d) { return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+function formatTime(d) { return d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }
+function save(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
+function load(key, fallback){ const val = localStorage.getItem(key); return val ? JSON.parse(val) : fallback; }
+/* ==== TAB NAVIGATION ==== */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=> {
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        document.querySelectorAll('main > section').forEach(sec=> sec.classList.toggle('active', sec.id===btn.dataset.tab));
+    });
+});
+/* ==== SEARCH SHORTCUT ==== */
+document.addEventListener('keydown', e=>{
+    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()=='k'){
+        e.preventDefault();
+        document.getElementById('globalSearch').focus();
+    }
+});
+/* ==== WELCOME MESSAGE ==== */
+function updateWelcome(){
+    const now = new Date();
+    const hour = now.getHours();
+    const part = hour<12?"morning":hour<18?"afternoon":"evening";
+    const msg = `Good ${part}, ${CONFIG.name || "Friend"} – ${formatDate(now)} ${formatTime(now)}`;
+    document.getElementById('welcomeMsg').textContent = msg;
+}
+setInterval(updateWelcome,60000);
+updateWelcome();
+/* ==== DASHBOARD METRICS ==== */
+function computeMetrics(){
+    const tasks = load('tasks',[]);
+    const today = new Date().toISOString().slice(0,10);
+    const todayCount = tasks.filter(t=>t.created===today).length;
+    document.getElementById('todayTasks').textContent = todayCount;
+    const activeProjects = load('projects',[]).filter(p=>!p.done).length;
+    document.getElementById('activeProjects').textContent = activeProjects;
+    const goalProgress = 0; // placeholder
+    document.getElementById('goalProgress').textContent = goalProgress + "%";
+    const deadline = new Date(CONFIG.goalDeadline);
+    const diff = Math.max(0, Math.round((deadline - new Date())/86400000));
+    document.getElementById('daysToGoal').textContent = diff;
+}
+computeMetrics();
+/* ==== ACTIVITY FEED ==== */
+function addFeedItem(text){
+    const feed = document.getElementById('activityFeed');
+    const item = document.createElement('div');
+    item.className='item';
+    const ts = new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    item.innerHTML = `<span>${text}</span> <span class="timestamp">${ts}</span>`;
+    feed.prepend(item);
+}
+function loadFeed(){
+    const feed = load('feed',[]);
+    feed.forEach(i=> addFeedItem(i));
+}
+loadFeed();
+/* ==== PRIORITIES ==== */
+function renderPriorities(){
+    const list = document.getElementById('priorityList');
+    list.innerHTML='';
+    const priorities = load('priorities',[]);
+    priorities.forEach((p,i)=>{
+        const div=document.createElement('div');
+        div.className='priority-item';
+        div.innerHTML = `
+            <input type="checkbox" id="p${i}" ${p.done?'checked':''}>
+            <label for="p${i}">${p.text}</label>
+            <button data-idx="${i}">✕</button>`;
+        list.appendChild(div);
+        div.querySelector('input').addEventListener('change',()=> {
+            priorities[i].done = div.querySelector('input').checked;
+            save('priorities',priorities);
+            addFeedItem('Priority '+(priorities[i].done?'completed':'reopened')+': '+priorities[i].text);
+        });
+        div.querySelector('button').addEventListener('click',()=> {
+            priorities.splice(i,1);
+            save('priorities',priorities);
+            renderPriorities();
+            addFeedItem('Priority removed');
+        });
+    });
+}
+document.getElementById('addPriorityBtn').addEventListener('click',()=>{
+    const txt = prompt('New priority:');
+    if(txt){
+        const priorities = load('priorities',[]);
+        priorities.push({text:txt,done:false});
+        save('priorities',priorities);
+        renderPriorities();
+        addFeedItem('Priority added: '+txt);
+    }
+});
+renderPriorities();
+/* ==== KANBAN ==== */
+function renderKanban(){
+    const cols = {backlog:[],inprogress:[],done:[]};
+    const tasks = load('tasks',[]);
+    tasks.forEach(t=> cols[t.column].push(t));
+    Object.entries(cols).forEach(([colName,items])=>{
+        const col = document.querySelector(`.column[data-col="${colName}"] .tasks`);
+        col.innerHTML='';
+        items.forEach(t=>{
+            const card=document.createElement('div');
+            card.className='task';
+            card.dataset.id=t.id;
+            card.innerHTML = `
+                <div><strong>${t.title}</strong></div>
+                <div class="desc">${t.desc || ''}</div>
+                <div class="badge ${t.priority}">${t.priority}</div>
+                <div class="date">${t.created}</div>`;
+            col.appendChild(card);
+            card.addEventListener('click',()=> openTaskEditor(t.id));
+        });
+    });
+}
+function addKanbanTask(col){
+    const title = prompt('Task title:');
+    if(!title) return;
+    const desc = prompt('Short description (optional):')||'';
+    const priority = prompt('Priority (high/medium/low):','low');
+    const id = Date.now();
+    const task={id,title,desc,priority,created:new Date().toISOString().slice(0,10),column:col};
+    const tasks = load('tasks',[]);
+    tasks.push(task);
+    save('tasks',tasks);
+    renderKanban();
+    addFeedItem(`Task added to ${col}: ${title}`);
+}
+document.querySelectorAll('.column button.add').forEach(btn=>{
+    btn.addEventListener('click',()=> {
+        const col = btn.closest('.column').dataset.col;
+        addKanbanTask(col);
+    });
+});
+function openTaskEditor(id){
+    const tasks = load('tasks',[]);
+    const task = tasks.find(t=>t.id===id);
+    if(!task) return;
+    const newTitle = prompt('Edit title:',task.title);
+    if(newTitle!==null) task.title=newTitle;
+    const newDesc = prompt('Edit description:',task.desc);
+    if(newDesc!==null) task.desc=newDesc;
+    const newPri = prompt('Edit priority (high/medium/low):',task.priority);
+    if(newPri!==null) task.priority=newPri;
+    const newCol = prompt('Move to column (backlog/inprogress/done):',task.column);
+    if(newCol!==null) task.column=newCol;
+    save('tasks',tasks);
+    renderKanban();
+    addFeedItem('Task updated: '+task.title);
+}
+renderKanban();
+/* ==== TIMELINE ==== */
+const timelineData = [
+    {title:"Phase 1",range:"Jan – Mar",desc:"Initial planning",milestones:[{txt:"Kickoff",done:true},{txt:"Requirements",done:true}],current:true},
+    {title:"Phase 2",range:"Apr – Jun",desc:"Development",milestones:[{txt:"MVP",done:false},{txt:"Beta",done:false}],current:false},
+    {title:"Phase 3",range:"Jul – Sep",desc:"Launch",milestones:[{txt:"Marketing",done:false},{txt:"Release",done:false}],current:false}
+];
+function renderTimeline(){
+    const container=document.getElementById('timelineContainer');
+    timelineData.forEach(p=>{
+        const div=document.createElement('div');
+        div.className='phase'+(p.current?' current':'');
+        div.innerHTML=`
+            <h4>${p.title}</h4>
+            <div class="date">${p.range}</div>
+            <div class="desc">${p.desc}</div>
+            <ul class="milestones">
+                ${p.milestones.map(m=>`<li class="${m.done?'done':'pending'}">${m.txt}</li>`).join('')}
+            </ul>`;
+        container.appendChild(div);
+    });
+}
+renderTimeline();
+/* ==== NOTES ==== */
+const notesArea=document.getElementById('notesArea');
+const notesInfo=document.getElementById('notesInfo');
+function loadNotes(){
+    const txt=load('notes','');
+    notesArea.value=txt;
+    updateNotesInfo();
+}
+function updateNotesInfo(){
+    const len=notesArea.value.length;
+    const last=localStorage.getItem('notes_ts')||'Never';
+    notesInfo.textContent=`${len} chars • Last saved: ${last}`;
+}
+notesArea.addEventListener('input',()=>{
+    const txt=notesArea.value;
+    save('notes',txt);
+    localStorage.setItem('notes_ts',new Date().toLocaleTimeString());
+    updateNotesInfo();
+});
+loadNotes();
+/* ==== STATUS DOT ==== */
+function setStatus(online){
+    const dot=document.getElementById('statusDot');
+    dot.style.background=online?'#4caf50':'#f44336';
+}
+setStatus(true);
+/* ==== INITIALIZATION ==== */
+window.addEventListener('load',()=>{ computeMetrics(); initCommandCenter(); initRevenue(); initIntel(); });
+
+/* ==== COMMAND CENTER (Agents & Decisions) ==== */
+const defaultAgents = [
+    { id:1, name:'Loui', role:'Personal AI Assistant', status:'online', model:'Haimaker MiniMax M2.1', description:'Full-time AI partner for betting automation and proactive support.', capabilities:['Betting automation','Proactive alerts','Task management'], performance:'Relentlessly resourceful, EV-first insights, direct communication.' },
+    { id:2, name:'Metis', role:'Research Analyst', status:'busy', model:'OpenAI GPT-5.2', description:'Deep research specialist for market trends.', capabilities:['Market analysis','Data mining','Report generation'], performance:'High accuracy, thorough documentation.' },
+    { id:3, name:'Atlas', role:'Project Orchestrator', status:'offline', model:'OpenAI GPT-5-mini', description:'Coordinates multi-agent workflows.', capabilities:['Task routing','Team synchronization','Status tracking'], performance:'Ensures smooth hand-offs, reliable scheduling.' },
+    { id:4, name:'Sisyphus', role:'Code Engineer', status:'online', model:'OpenCode', description:'Automates repetitive coding tasks.', capabilities:['CI/CD','Scripting','Bug fixes'], performance:'Fast iteration, clean code delivery.' }
+];
+const defaultDecisions = [
+    { date:'2026-02-10', question:'Which model for high-risk predictions?', decision:'Deploy Haimaker MiniMax M2.1 with custom scoring.', consulted:['Loui','Metis'] },
+    { date:'2026-02-12', question:'How to handle new betting API?', decision:'Wrap API with authentication layer.', consulted:['Sisyphus','Atlas'] }
+];
+
+function loadAgentData(){ return load('agents', defaultAgents); }
+function saveAgentData(data){ save('agents', data); }
+function loadDecisions(){ return load('decisions', defaultDecisions); }
+function saveDecisions(data){ save('decisions', data); }
+
+function initCommandCenter(){
+    renderAgents();
+    renderDecisions();
+}
+function renderAgents(){
+    const agents = loadAgentData();
+    const grid = document.getElementById('agentGrid');
+    grid.innerHTML = '';
+    agents.forEach(ag=>{
+        const div = document.createElement('div');
+        div.className = 'agent-card';
+        div.innerHTML = `
+            <div class="agent-header">
+                <div class="agent-avatar">${ag.name[0]}</div>
+                <div class="agent-status ${'status-'+ag.status}"></div>
+            </div>
+            <div class="agent-name">${ag.name}</div>
+            <div class="agent-role">${ag.role}</div>
+            <div class="agent-meta"><span>${ag.model}</span><span>Last active: ${ag.lastActive || '-'}</span></div>
+        `;
+        div.onclick = () => openSlide(ag.id);
+        grid.appendChild(div);
+    });
+}
+function renderDecisions(){
+    const decisions = loadDecisions();
+    const grid = document.getElementById('decisionsGrid');
+    grid.innerHTML = '';
+    decisions.forEach(d=>{
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+            <div class="accent"></div>
+            <div class="label">${d.date}</div>
+            <div class="value" style="font-size:1rem; margin-top:0.5rem;">${d.question}</div>
+            <div class="trend">Decision: ${d.decision}</div>
+            <div class="trend">Consulted: ${d.consulted.join(', ')}</div>
+        `;
+        grid.appendChild(div);
+    });
+}
+function openSlide(id){
+    const agents = loadAgentData();
+    const ag = agents.find(a=>a.id===id);
+    if(!ag) return;
+    const panel = document.getElementById('agentSlide');
+    const content = document.getElementById('slideContent');
+    const logHtml = (ag.activity||[]).map(e=>`<div class="slide-log-item">${e.time} - ${e.msg}</div>`).join('');
+    content.innerHTML = `
+        <h3>${ag.name}</h3>
+        <p><strong>Role:</strong> ${ag.role}</p>
+        <p><strong>Status:</strong> ${ag.status}</p>
+        <p><strong>Model:</strong> ${ag.model}</p>
+        <p><strong>Description:</strong> ${ag.description}</p>
+        <div class="slide-section"><h4>Capabilities</h4><ul>${ag.capabilities.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+        <div class="slide-section"><h4>Performance Notes</h4><p>${ag.performance}</p></div>
+        <div class="slide-section"><h4>Activity Log</h4><div class="slide-log">${logHtml||'No activity yet'}</div></div>
+        <button class="slide-btn" onclick="openTaskModal(${ag.id})">Send Task</button>
+    `;
+    panel.classList.add('open');
+}
+function closeSlide(){ document.getElementById('agentSlide').classList.remove('open'); }
+function openTaskModal(id){ window.currentAgentId = id; document.getElementById('taskModal').classList.add('open'); document.getElementById('taskText').value=''; }
+function closeModal(){ document.getElementById('taskModal').classList.remove('open'); }
+function sendTask(){
+    const text = document.getElementById('taskText').value.trim();
+    if(!text) return;
+    const agents = loadAgentData();
+    const ag = agents.find(a=>a.id===window.currentAgentId);
+    if(ag){
+        if(!ag.activity) ag.activity = [];
+        ag.activity.push({time:new Date().toLocaleString(), msg:text});
+        saveAgentData(agents);
+        openSlide(ag.id);
+    }
+    closeModal();
+}
+/* ==== REVENUE TAB ==== */
+const defaultRevenueGoal = 10000;
+const defaultClients = [
+    {id:1, name:'Acme Corp', value:2500, status:'active', start:'2025-01-15'},
+    {id:2, name:'Beta Ltd', value:1800, status:'pending', start:'2025-03-01'},
+    {id:3, name:'Gamma AB', value:3200, status:'active', start:'2024-11-10'},
+    {id:4, name:'Delta Inc', value:800, status:'churned', start:'2024-06-20'}
+];
+const revenueHistory = [8500,9200,9800,10500,11200,12000]; // last 6 months
+
+function loadRevenueGoal(){ return load('revenueGoal', defaultRevenueGoal); }
+function saveRevenueGoal(val){ save('revenueGoal', val); }
+function loadClients(){ return load('clients', defaultClients); }
+function saveClients(list){ save('clients', list); }
+
+function initRevenue(){
+    renderRevenueGoal();
+    renderRevenueChart();
+    renderClients();
+    updateRevenueProjections();
+}
+function renderRevenueGoal(){
+    const goal = loadRevenueGoal();
+    document.getElementById('revenueGoalDisplay').textContent = '€' + goal.toLocaleString();
+    const clients = loadClients();
+    const mrr = clients.reduce((sum,c)=>c.status!=='churned'?sum+c.value:sum,0);
+    const pct = Math.min(100, Math.round(mrr/goal*100));
+    document.getElementById('revenuePercent').textContent = pct + '%';
+    const ring = document.getElementById('revenueProgressRing');
+    const circumference = 2*Math.PI*54;
+    const offset = circumference - (pct/100)*circumference;
+    ring.style.strokeDashoffset = offset;
+}
+function renderRevenueChart(){
+    const canvas = document.getElementById('revenueChart');
+    const ctx = canvas.getContext('2d');
+    const data = revenueHistory;
+    const max = Math.max(...data, loadRevenueGoal());
+    const barWidth = canvas.width/data.length - 10;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    data.forEach((val,i)=>{
+        const h = (val/max)*canvas.height;
+        const x = i*(barWidth+10)+5;
+        const y = canvas.height - h;
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        ctx.fillRect(x,y,barWidth,h);
+    });
+}
+function renderClients(){
+    const list = document.getElementById('clientList');
+    list.innerHTML = '';
+    const clients = loadClients();
+    clients.forEach(c=>{
+        const div = document.createElement('div');
+        div.className = 'revenue-card';
+        div.innerHTML = `
+            <div class="revenue-client">
+                <div>
+                    <div class="revenue-client-name">${c.name}</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted)">Started ${c.start}</div>
+                </div>
+                <div class="revenue-client-value">€${c.value}</div>
+                <span class="revenue-client-status status-${c.status}">${c.status}</span>
+                <div class="revenue-actions">
+                    <button onclick="editClient(${c.id})">✏️</button>
+                    <button onclick="removeClient(${c.id})">🗑️</button>
+                </div>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+function addClient(){
+    const name = prompt('Client name:');
+    if(!name) return;
+    const value = parseFloat(prompt('Monthly value (€):'))||0;
+    const start = new Date().toISOString().split('T')[0];
+    const clients = loadClients();
+    const newId = clients.length?Math.max(...clients.map(c=>c.id))+1:1;
+    clients.push({id:newId,name,value,status:'pending',start});
+    saveClients(clients);
+    renderClients();
+    renderRevenueGoal();
+    updateRevenueProjections();
+}
+function editClient(id){
+    const clients = loadClients();
+    const c = clients.find(x=>x.id===id);
+    if(!c) return;
+    c.name = prompt('Edit name:',c.name)??c.name;
+    const newVal = prompt('Edit monthly value (€):',c.value);
+    if(newVal!==null) c.value = parseFloat(newVal)||0;
+    const newStatus = prompt('Edit status (active/pending/churned):',c.status);
+    if(newStatus && ['active','pending','churned'].includes(newStatus.toLowerCase())) c.status = newStatus.toLowerCase();
+    saveClients(clients);
+    renderClients();
+    renderRevenueGoal();
+    updateRevenueProjections();
+}
+function removeClient(id){
+    if(!confirm('Remove this client?')) return;
+    let clients = loadClients();
+    clients = clients.filter(c=>c.id!==id);
+    saveClients(clients);
+    renderClients();
+    renderRevenueGoal();
+    updateRevenueProjections();
+}
+function updateRevenueProjections(){
+    const clients = loadClients();
+    const mrr = clients.reduce((sum,c)=>c.status!=='churned'?sum+c.value:sum,0);
+    document.getElementById('currentMRR').textContent = '€'+mrr.toLocaleString();
+    const annual = mrr*12;
+    document.getElementById('projectedAnnual').textContent = '€'+annual.toLocaleString();
+    const goal = loadRevenueGoal();
+    const needed = Math.max(0, goal - mrr);
+    document.getElementById('growthNeeded').textContent = '€'+needed.toLocaleString()+' /mo';
+}
+document.getElementById('addClientBtn').addEventListener('click',addClient);
+
+/* ==== INTEL TAB ==== */
+const defaultIntel = [
+    {id:1, title:'GPT-5 released', summary:'OpenAI announces GPT-5 with multimodal capabilities.', source:'https://openai.com/blog/gpt-5', date:new Date().toISOString(), category:'ai-news', importance:'hot'},
+    {id:2, title:'EU AI Act update', summary:'European Parliament agrees on final AI Act text.', source:'https://example.com/eu-ai-act', date:new Date().toISOString(), category:'industry-trends', importance:'notable'},
+    {id:3, title:'Competitor X launches new tool', summary:'Rival startup releases AI coding assistant.', source:'https://example.com/rival', date:new Date().toISOString(), category:'competitor-watch', importance:'reference'},
+    {id:4, title:'Investment opportunity in AI health', summary:'Series A funding round for AI diagnostics startup.', source:'https://example.com/health-ai', date:new Date().toISOString(), category:'opportunities', importance:'notable'}
+];
+function loadIntel(){ return load('intel', defaultIntel); }
+function saveIntel(data){ save('intel', data); }
+function initIntel(){ renderIntelList(); renderDailyBrief(); }
+function renderIntelList(){
+    const intel = loadIntel();
+    const cat = document.getElementById('intelCatFilter').value;
+    const imp = document.getElementById('intelImpFilter').value;
+    const term = document.getElementById('intelSearch').value.trim().toLowerCase();
+    const list = document.getElementById('intelList');
+    list.innerHTML = '';
+    const filtered = intel.filter(i=>{
+        const matchesCat = cat ? i.category===cat : true;
+        const matchesImp = imp ? i.importance===imp : true;
+        const matchesTerm = term ? i.title.toLowerCase().includes(term) || i.summary.toLowerCase().includes(term) : true;
+        return matchesCat && matchesImp && matchesTerm;
+    });
+    filtered.forEach(item=>{
+        const div = document.createElement('div');
+        div.className = 'intel-card';
+        const tagClass = 'tag-'+item.importance;
+        const impLabel = item.importance==='hot'?'🔥 Hot':item.importance==='notable'?'⚡️ Notable':'📌 Reference';
+        div.innerHTML = `
+            <div class="intel-title">${item.title}<span class="intel-tag ${tagClass}">${impLabel}</span></div>
+            <div class="intel-summary">${item.summary}</div>
+            <a href="${item.source}" target="_blank" class="intel-source">${item.source}</a>
+            <div class="intel-meta">${item.category.replace('-',' ')} • ${new Date(item.date).toLocaleDateString()}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+function renderDailyBrief(){
+    const intel = loadIntel();
+    const sorted = intel.slice().sort((a,b)=>{
+        const w = {hot:3, notable:2, reference:1};
+        const wa = w[a.importance]||0, wb = w[b.importance]||0;
+        if(wa!==wb) return wb-wa;
+        return new Date(b.date)-new Date(a.date);
+    }).slice(0,5);
+    const container = document.getElementById('intelDailyBrief');
+    container.innerHTML = '';
+    sorted.forEach(item=>{
+        const div = document.createElement('div');
+        div.className = 'intel-card';
+        const tagClass = 'tag-'+item.importance;
+        const impLabel = item.importance==='hot'?'🔥 Hot':item.importance==='notable'?'⚡️ Notable':'📌 Reference';
+        div.innerHTML = `<div class="intel-title">${item.title}<span class="intel-tag ${tagClass}">${impLabel}</span></div><div class="intel-summary">${item.summary}</div>`;
+        container.appendChild(div);
+    });
+}
+function openIntelModal(){ document.getElementById('intelModal').classList.add('open'); }
+function closeIntelModal(){ document.getElementById('intelModal').classList.remove('open'); }
+function saveNewIntel(){
+    const title = document.getElementById('intelTitle').value.trim();
+    const summary = document.getElementById('intelSummary').value.trim();
+    const source = document.getElementById('intelSource').value.trim();
+    const category = document.getElementById('intelCategory').value;
+    const importance = document.getElementById('intelImportance').value;
+    if(!title||!summary||!source||!category||!importance) return;
+    const intel = loadIntel();
+    const newId = intel.length?Math.max(...intel.map(i=>i.id))+1:1;
+    intel.push({id:newId, title, summary, source, date:new Date().toISOString(), category, importance});
+    saveIntel(intel);
+    closeIntelModal();
+    renderIntelList();
+    renderDailyBrief();
+    document.getElementById('intelTitle').value=''; document.getElementById('intelSummary').value=''; document.getElementById('intelSource').value='';
+}
+document.getElementById('addIntelBtn').addEventListener('click',openIntelModal);
+document.getElementById('intelSearch').addEventListener('input',renderIntelList);
+document.getElementById('intelCatFilter').addEventListener('change',renderIntelList);
+document.getElementById('intelImpFilter').addEventListener('change',renderIntelList);
+</script>
+</body>
+</html>
